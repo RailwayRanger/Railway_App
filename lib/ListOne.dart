@@ -150,7 +150,7 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
                         controller: requestController,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          hintText: '부모님이랑 조용히 쉬고 싶어요 / 아이가 놀이공원 좋아해요',
+                          hintText: 'ex)부모님이랑 조용히 쉬고 싶어요 / 아이가 놀이공원 좋아해요',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           contentPadding: const EdgeInsets.all(12),
                         ),

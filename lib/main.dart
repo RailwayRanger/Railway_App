@@ -40,16 +40,18 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   String? userName;
 
-  final List<Widget> _screens = [
-    const TravelListScreen(),
-    const SearchScreen(),
-    const Center(child: Text('안내 화면')), // 필요 시 수정
-  ];
+  late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
     _autoLogin();
+
+    _screens = [
+      const TravelListScreen(), // 단일 인스턴스 유지
+      const SearchScreen(),
+      const Center(child: Text('안내 화면')),
+    ];
   }
 
   // 외부에서 탭 인덱스를 변경할 수 있는 메서드를 추가합니다.
@@ -145,7 +147,10 @@ class _MainScreenState extends State<MainScreen> {
         elevation: 1,
         foregroundColor: Colors.black,
       ),
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
         currentIndex: _currentIndex,
@@ -185,7 +190,7 @@ class TravelListScreen extends StatelessWidget {
                 builder: (_) => const Center(child: CircularProgressIndicator()),
               );
 
-              Future.delayed(const Duration(seconds: 2), () {
+              Future.delayed(const Duration(seconds: 1), () {
                 Navigator.pop(context); // 로딩 닫기
                 Navigator.push(
                   context,

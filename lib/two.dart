@@ -1,6 +1,9 @@
-import 'dart:math';
+import 'dart:convert';
+// import 'dart:math';
 import 'package:flutter/material.dart';
 import 'main.dart'; // MainScreen의 GlobalKey에 접근
+import 'package:http/http.dart' as http;
+// import 'dart:concurrent';
 
 class TravelScheduleScreen extends StatefulWidget {
   final DateTime startDate;
@@ -132,7 +135,9 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
                   Text('• 관계: ${widget.relations.join(', ')}', style: const TextStyle(color: Colors.grey)),
                 if (widget.request.trim().isNotEmpty)
                   Text('• 요청사항: ${widget.request}', style: const TextStyle(color: Colors.grey)),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+
                 for (int day in widget.scheduleData.keys) ...[
                   Text('$day일차', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 8),
@@ -171,6 +176,7 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
                         ),
                       ),
                     ),
+
                     if (selectedDay == day && selectedIndex == i)
                       Padding(
                         padding: const EdgeInsets.only(left: 28, bottom: 12),
@@ -185,8 +191,86 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
                         ),
                       ),
                   ],
+
                   const SizedBox(height: 24),
+
                 ],
+                // 👇 반복문 다 끝난 후 추가
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.delete, color: Colors.white,),
+                      label: const Text('리스트 삭제', style: TextStyle(color: Colors.white),),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                      onPressed: () {
+                        Navigator.popUntil(context, (route) => route.isFirst);
+                        MainScreen.globalKey.currentState?.setTab(0);
+                      },
+                    ),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.save, size: 18, color: Colors.white),
+                      label: const Text('리스트 저장', style: TextStyle(color: Colors.white),),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.indigoAccent),
+                      onPressed: () async {
+                        final convertedScheduleData = widget.scheduleData.map(
+                              (k, v) => MapEntry(
+                            k.toString(),
+                            v.map((item) => {
+                              'time': item['time'] ?? '',
+                              'desc': item['desc'] ?? '',
+                            }).toList(),
+                          ),
+                        );
+
+                        final bodyData = {
+                          'startDate': widget.startDate.toIso8601String(),
+                          'endDate': widget.endDate.toIso8601String(),
+                          'tags': widget.tags,
+                          'people': widget.people,
+                          'relations': widget.relations,
+                          'request': widget.request,
+                          'scheduleData': convertedScheduleData,
+                        };
+
+                        final response = await http.post(
+                          Uri.parse('https://port-0-railway-backend-mczsqk1b8f7c8972.sel5.cloudtype.app/schedule'),
+                          headers: {'Content-Type': 'application/json'},
+                          body: jsonEncode(bodyData),
+                        );
+                        print('응답 상태코드: ${response.statusCode}');
+                        print('응답 본문: ${response.body}');
+
+
+                        if (response.statusCode == 200 || response.statusCode == 201) {
+                          if (context.mounted) {
+                            Navigator.popUntil(context, (route) => route.isFirst);
+                            MainScreen.globalKey.currentState?.setTab(0);
+
+                            ScaffoldMessenger.of(MainScreen.globalKey.currentContext!).showSnackBar(
+                              const SnackBar(content: Text('✅ 일정이 저장되었습니다.')),
+                            );
+                          }
+                        } else {
+                          if (context.mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: const Text('오류'),
+                                content: const Text('일정 저장에 실패했습니다.'),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인')),
+                                ],
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+
               ],
             ),
           ),
