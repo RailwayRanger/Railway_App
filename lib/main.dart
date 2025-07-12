@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'ListOne.dart'; // TravelListScreen, TravelFormScreen
 import 'search.dart';  // SearchScreen
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
 
@@ -73,6 +75,22 @@ class _MainScreenState extends State<MainScreen> {
         setState(() {
           userName = account.displayName ?? account.email;
         });
+
+        // ✅ 백엔드에 로그인 정보 전송
+        final response = await http.post(
+          Uri.parse('https://port-0-railway-backend-mczsqk1b8f7c8972.sel5.cloudtype.app/auth/google'), // 백엔드 주소 넣기!
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': account.email,
+            'name': account.displayName ?? account.email,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          print('✅ 서버 응답: ${response.body}');
+        } else {
+          print('❌ 서버 오류: ${response.statusCode}');
+        }
       }
     } catch (error) {
       print('에러: $error');
