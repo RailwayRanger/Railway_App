@@ -187,7 +187,8 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
                               print('응답 상태 코드: ${response.statusCode}');
                               print('응답 본문: ${response.body}');
 
-                              Navigator.pop(context); // 로딩 다이얼로그 닫기
+
+                              }
 
                               if (response.statusCode == 200) {
                                 final result = jsonDecode(response.body);
@@ -213,8 +214,16 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
                                   ),
                                 );
                               } else {
-                                print('서버 오류: ${response.statusCode}');
-                                // 에러 처리 UI 추가 가능
+                                if(mounted) {
+                                Navigator.pop(context);
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('오류 발생'),
+                                    content: Text('서버 오류가 발생했습니다. (${response.statusCode})'),
+                                    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인'))],
+                                  ),
+                                );
                               }
                             } catch (e) {
                               Navigator.pop(context);
