@@ -1,10 +1,10 @@
+// main.dart
 import 'package:flutter/material.dart';
-import 'ListOne.dart';
+import 'ListOne.dart'; // TravelListScreen, TravelFormScreen
+import 'search.dart';  // SearchScreen
 import 'package:google_sign_in/google_sign_in.dart';
 
-final GoogleSignIn _googleSignIn = GoogleSignIn(
-  scopes: ['email'],
-);
+final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
 
 void main() {
   runApp(const MyApp());
@@ -18,24 +18,43 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '여행 일정 생성',
       debugShowCheckedModeBanner: false,
-      home: TravelListScreen(),
-
+      // MainScreen에 globalKey를 연결합니다.
+      home: MainScreen(key: MainScreen.globalKey),
     );
   }
 }
 
-class TravelListScreen extends StatefulWidget {
+class MainScreen extends StatefulWidget {
+  // GlobalKey를 static 멤버로 추가하여 다른 곳에서 이 State에 접근할 수 있게 합니다.
+  static final GlobalKey<_MainScreenState> globalKey = GlobalKey();
+
+  const MainScreen({Key? key}) : super(key: key); // 생성자에 key를 받도록 수정합니다.
+
   @override
-  _TravelListState createState() => _TravelListState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _TravelListState extends State<TravelListScreen> {
+class _MainScreenState extends State<MainScreen> {
+  int _currentIndex = 0;
   String? userName;
+
+  final List<Widget> _screens = [
+    const TravelListScreen(),
+    const SearchScreen(),
+    const Center(child: Text('안내 화면')), // 필요 시 수정
+  ];
 
   @override
   void initState() {
     super.initState();
     _autoLogin();
+  }
+
+  // 외부에서 탭 인덱스를 변경할 수 있는 메서드를 추가합니다.
+  void setTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
   }
 
   Future<void> _autoLogin() async {
@@ -71,34 +90,22 @@ class _TravelListState extends State<TravelListScreen> {
     if (userName == null) {
       return GestureDetector(
         onTap: onLogin,
-        child: Text('로그인', style: TextStyle(fontSize: 16, color: Colors.black)),
+        child: const Text('로그인', style: TextStyle(fontSize: 16, color: Colors.black)),
       );
     } else {
-      return SizedBox(
-        child: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'logout') onLogout();
-          },
-          itemBuilder: (context) =>
-          [
-            PopupMenuItem<String>(
-              value: 'logout',
-              height: 30,
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                '로그아웃',
-                style: TextStyle(fontSize: 14, color: Colors.black),
-              ),
-            ),
-          ],
-          child: GestureDetector(
-            onTap: null,
-            child: Text(
-              userName!,
-              style: TextStyle(fontSize: 16, color: Colors.black),
-            ),
+      return PopupMenuButton<String>(
+        onSelected: (value) {
+          if (value == 'logout') onLogout();
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem<String>(
+            value: 'logout',
+            height: 30,
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text('로그아웃', style: TextStyle(fontSize: 14, color: Colors.black)),
           ),
-        ),
+        ],
+        child: Text(userName!, style: const TextStyle(fontSize: 16, color: Colors.black)),
       );
     }
   }
@@ -111,10 +118,7 @@ class _TravelListState extends State<TravelListScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              '여행 일정 리스트',
-              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 20),
-            ),
+            const Text('여행 일정 생성', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 20)),
             loginButton(),
           ],
         ),
@@ -123,53 +127,61 @@ class _TravelListState extends State<TravelListScreen> {
         elevation: 1,
         foregroundColor: Colors.black,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              '일정이 없습니다.',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 20),
-            OutlinedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const Center(child: CircularProgressIndicator()),
-                );
-
-                Future.delayed(const Duration(seconds: 2), () {
-                  Navigator.pop(context); // 로딩 닫기
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const TravelFormScreen()),
-                  );
-                });
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.blue),
-              ),
-              child: const Text('일정 추가', style: TextStyle(color: Colors.blue)),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'AI가 만들어주는 여행 일정',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
+      body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
-        currentIndex: 0,
+        currentIndex: _currentIndex,
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.access_time), label: '일정'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: '정보'),
           BottomNavigationBarItem(icon: Icon(Icons.location_on), label: '안내'),
+        ],
+      ),
+    );
+  }
+}
+
+class TravelListScreen extends StatelessWidget {
+  const TravelListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('일정이 없습니다.', style: TextStyle(fontSize: 16)),
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator()),
+              );
+
+              Future.delayed(const Duration(seconds: 2), () {
+                Navigator.pop(context); // 로딩 닫기
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TravelFormScreen()),
+                );
+              });
+            },
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.blue),
+            ),
+            child: const Text('일정 추가', style: TextStyle(color: Colors.blue)),
+          ),
+          const SizedBox(height: 10),
+          const Text('AI가 만들어주는 여행 일정', style: TextStyle(color: Colors.grey)),
         ],
       ),
     );

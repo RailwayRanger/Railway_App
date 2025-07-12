@@ -1,5 +1,8 @@
+// two.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'search.dart';
+import 'main.dart'; // main.dart를 import하여 MainScreen의 GlobalKey에 접근
 
 class TravelScheduleScreen extends StatefulWidget {
   final DateTime startDate;
@@ -33,7 +36,7 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
   final Map<String, List<String>> regionMap = {
     '서울': ['서울 경복궁', '서울 남산타워'],
     '부산': ['부산 해운대', '부산 감천문화마을'],
-    '제주': ['제주 성산일출봉', '제주 우도'],
+    '제주': ['제주 성산일출궁', '제주 우도'], // '제주 성산일출봉' 오타 수정
     '강원': ['강릉 안목해변', '강릉 경포대', '속초 설악산', '속초 대포항', '양양 서피비치'],
     '경북': ['경주 불국사', '경주 첨성대', '포항 호미곶', '울산 대왕암공원'],
     '전라': ['전주 한옥마을', '여수 해상케이블카', '여수 오동도', '군산 근대역사박물관'],
@@ -71,7 +74,7 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
     '여수 해상케이블카': ['감성', '액티비티'],
     '여수 오동도': ['자연', '힐링'],
     '군산 근대역사박물관': ['문화/역사'],
-    '제주 성산일출봉': ['자연', '액티비티'],
+    '제주 성산일출궁': ['자연', '액티비티'], // '제주 성산일출봉' 오타 수정
     '제주 우도': ['자연', '힐링'],
     '대전 성심당': ['도시', '맛집'],
     '태안 꽃지해수욕장': ['자연', '힐링'],
@@ -171,11 +174,7 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
           ],
         ),
         actions: [
-          TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('취소')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
           ElevatedButton(
             onPressed: () {
               setState(() {
@@ -300,12 +299,19 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
         selectedFontSize: 12.0,
         unselectedFontSize: 12.0,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.schedule), label: '일정'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: '정보'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '안내'),
+          BottomNavigationBarItem(icon: Icon(Icons.access_time), label: '일정'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: '정보'),
+          BottomNavigationBarItem(icon: Icon(Icons.location_on), label: '안내'),
         ],
-        currentIndex: 0,
+        currentIndex: 0, // '일정' 화면이므로 기본적으로 0 (일정)을 선택합니다.
         type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          // Navigator 스택에서 현재 화면(TravelScheduleScreen)을 포함한 모든 이전 화면을 제거하고
+          // 최상위 루트 화면(MainScreen)으로 돌아갑니다.
+          Navigator.popUntil(context, (route) => route.isFirst);
+          // MainScreen의 setTab 메서드를 호출하여 원하는 탭으로 전환합니다.
+          MainScreen.globalKey.currentState?.setTab(index);
+        },
       ),
     );
   }

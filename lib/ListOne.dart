@@ -1,5 +1,8 @@
+// ListOne.dart
 import 'package:flutter/material.dart';
-import 'two.dart';
+import 'two.dart'; // TravelScheduleScreen
+import 'main.dart'; // MainScreen의 GlobalKey에 접근하기 위해 import
+// import 'search.dart'; // SearchScreen으로 직접 이동하는 것이 아니라 MainScreen을 통해 이동하므로 이 import는 필요 없습니다.
 
 class TravelFormScreen extends StatefulWidget {
   const TravelFormScreen({super.key});
@@ -50,25 +53,21 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, //
+      backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
             child: AppBar(
-              automaticallyImplyLeading: false,
+              // 뒤로가기 버튼을 활성화하여 사용자가 TravelFormScreen을 닫고 이전 화면으로 돌아갈 수 있도록 합니다.
+              automaticallyImplyLeading: true, // 기본 뒤로가기 버튼 활성화
               backgroundColor: Colors.white,
               foregroundColor: Colors.black,
               elevation: 1,
-              title: Row(
-                children: const [
-                  Icon(Icons.arrow_back, color: Colors.black),
-                  Spacer(),
-                  Text('여행 일정 생성', style: TextStyle(color: Colors.black)),
-                  Spacer(),
-                ],
-              ),
+              title: const Text('여행 일정 생성', style: TextStyle(color: Colors.black)),
+              centerTitle: true, // 제목을 중앙에 정렬
+              // 기존의 Row 위젯 대신 자동으로 생성되는 뒤로가기 버튼을 사용합니다.
             ),
           ),
         ),
@@ -198,19 +197,28 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
           );
         },
       ),
+      // 여기에 BottomNavigationBar를 다시 추가합니다.
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white, //
+        backgroundColor: Colors.white,
         selectedItemColor: Colors.indigoAccent,
         unselectedItemColor: Colors.grey,
         selectedFontSize: 12.0,
         unselectedFontSize: 12.0,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.schedule), label: '일정'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: '정보'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: '정보'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '안내'),
         ],
+        // TravelFormScreen은 '일정' 탭에서 파생되었으므로, 기본적으로 '일정' 탭이 선택되어 있도록 합니다.
         currentIndex: 0,
-        onTap: null,
+        onTap: (index) {
+          // Navigator 스택에서 현재 화면(TravelFormScreen)을 포함한 모든 이전 화면을 제거하고
+          // 최상위 루트 화면(MainScreen)으로 돌아갑니다.
+          Navigator.popUntil(context, (route) => route.isFirst);
+          // MainScreen의 setTab 메서드를 호출하여 원하는 탭으로 전환합니다.
+          // MainScreen.globalKey.currentState가 null일 수 있으므로 null-safe 연산자(?)를 사용합니다.
+          MainScreen.globalKey.currentState?.setTab(index);
+        },
         type: BottomNavigationBarType.fixed,
       ),
     );
