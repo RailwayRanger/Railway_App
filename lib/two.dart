@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'main.dart'; // MainScreen의 GlobalKey에 접근
 import 'package:http/http.dart' as http;
 // import 'dart:concurrent';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TravelScheduleScreen extends StatefulWidget {
   final DateTime startDate;
@@ -13,6 +14,9 @@ class TravelScheduleScreen extends StatefulWidget {
   final List<String> relations;
   final String request;
   final Map<int, List<Map<String, String>>> scheduleData;
+  final String userName;
+
+  final String? scheduleId; // 선택적으로 null 허용
 
   const TravelScheduleScreen({
     super.key,
@@ -23,6 +27,8 @@ class TravelScheduleScreen extends StatefulWidget {
     required this.relations,
     required this.request,
     required this.scheduleData,
+    required this.userName,
+    this.scheduleId,
   });
 
   @override
@@ -32,6 +38,11 @@ class TravelScheduleScreen extends StatefulWidget {
 class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
   int? selectedDay;
   int? selectedIndex;
+
+  void saveGuestSchedule(Map<String, dynamic> schedule) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('guest_schedule', jsonEncode(schedule));
+  }
 
   void _deleteItem(int day, int index) {
     setState(() {
@@ -203,10 +214,25 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
                       icon: const Icon(Icons.delete, color: Colors.white,),
                       label: const Text('리스트 삭제', style: TextStyle(color: Colors.white),),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-                      onPressed: () {
-                        Navigator.popUntil(context, (route) => route.isFirst);
-                        MainScreen.globalKey.currentState?.setTab(0);
+                      onPressed: () async {
+                        if (widget.userName.trim().isNotEmpty && widget.scheduleId != null) {
+                          // 서버에 삭제 요청 보내기
+                          final response = await http.delete(
+                            Uri.parse('https://port-0-railway-backend-mczsqk1b8f7c8972.sel5.cloudtype.app/schedule/${widget.scheduleId}'),
+                          );
+                          print('삭제 응답 코드: ${response.statusCode}');
+                        }
+
+                        // 화면 닫고 탭 초기화
+                        if (mounted) {
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                          MainScreen.globalKey.currentState?.setTab(0);
+                          ScaffoldMessenger.of(MainScreen.globalKey.currentContext!).showSnackBar(
+                            const SnackBar(content: Text('🗑️ 일정이 삭제되었습니다.')),
+                          );
+                        }
                       },
+
                     ),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.save, size: 18, color: Colors.white),
@@ -222,7 +248,6 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
                             }).toList(),
                           ),
                         );
-
                         final bodyData = {
                           'startDate': widget.startDate.toIso8601String(),
                           'endDate': widget.endDate.toIso8601String(),
@@ -231,38 +256,51 @@ class _TravelScheduleScreenState extends State<TravelScheduleScreen> {
                           'relations': widget.relations,
                           'request': widget.request,
                           'scheduleData': convertedScheduleData,
+                          'userId': widget.userName,
                         };
 
-                        final response = await http.post(
-                          Uri.parse('https://port-0-railway-backend-mczsqk1b8f7c8972.sel5.cloudtype.app/schedule'),
-                          headers: {'Content-Type': 'application/json'},
-                          body: jsonEncode(bodyData),
-                        );
-                        print('응답 상태코드: ${response.statusCode}');
-                        print('응답 본문: ${response.body}');
+                        if (widget.userName.trim().isEmpty) {
+                          // 👉 게스트일 경우 로컬에 저장
+                          saveGuestSchedule(bodyData);
 
-
-                        if (response.statusCode == 200 || response.statusCode == 201) {
                           if (context.mounted) {
                             Navigator.popUntil(context, (route) => route.isFirst);
                             MainScreen.globalKey.currentState?.setTab(0);
-
                             ScaffoldMessenger.of(MainScreen.globalKey.currentContext!).showSnackBar(
-                              const SnackBar(content: Text('✅ 일정이 저장되었습니다.')),
+                              const SnackBar(content: Text('✅ 게스트 일정이 저장되었습니다.')),
                             );
                           }
                         } else {
-                          if (context.mounted) {
-                            showDialog(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                title: const Text('오류'),
-                                content: const Text('일정 저장에 실패했습니다.'),
-                                actions: [
-                                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인')),
-                                ],
-                              ),
-                            );
+                          // 👉 로그인 유저일 경우 서버로 전송
+                          final response = await http.post(
+                            Uri.parse('https://port-0-railway-backend-mczsqk1b8f7c8972.sel5.cloudtype.app/schedule'),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode(bodyData),
+                          );
+                          print('응답 상태코드: ${response.statusCode}');
+                          print('응답 본문: ${response.body}');
+
+                          if (response.statusCode == 200 || response.statusCode == 201) {
+                            if (context.mounted) {
+                              Navigator.popUntil(context, (route) => route.isFirst);
+                              MainScreen.globalKey.currentState?.setTab(0);
+                              ScaffoldMessenger.of(MainScreen.globalKey.currentContext!).showSnackBar(
+                                const SnackBar(content: Text('✅ 일정이 저장되었습니다.')),
+                              );
+                            }
+                          } else {
+                            if (context.mounted) {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text('오류'),
+                                  content: const Text('일정 저장에 실패했습니다.'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인')),
+                                  ],
+                                ),
+                              );
+                            }
                           }
                         }
                       },

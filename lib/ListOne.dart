@@ -1,10 +1,8 @@
-// ListOne.dart
 import 'package:flutter/material.dart';
 import 'two.dart'; // TravelScheduleScreen
 import 'main.dart'; // MainScreen의 GlobalKey에 접근하기 위해 import
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-// import 'search.dart'; // SearchScreen으로 직접 이동하는 것이 아니라 MainScreen을 통해 이동하므로 이 import는 필요 없습니다.
 
 class TravelFormScreen extends StatefulWidget {
   const TravelFormScreen({super.key});
@@ -16,6 +14,8 @@ class TravelFormScreen extends StatefulWidget {
 class _TravelFormScreenState extends State<TravelFormScreen> {
   DateTime startDate = DateTime.now();
   DateTime endDate = DateTime.now().add(const Duration(days: 2));
+  TimeOfDay startTime = TimeOfDay.now();
+
   final List<String> allTags = ['힐링', '액티비티', '문화/역사', '자연', '맛집', '감성', '도시'];
   final List<String> selectedTags = [];
 
@@ -31,8 +31,6 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
   final List<String> selectedRelations = [];
 
   final TextEditingController requestController = TextEditingController();
-
-
 
   Future<void> pickDate({required bool isStart}) async {
     final picked = await showDatePicker(
@@ -52,6 +50,18 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
     }
   }
 
+  Future<void> pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: startTime,
+    );
+    if (picked != null) {
+      setState(() {
+        startTime = picked;
+      });
+    }
+  }
+
   int get totalPeople => peopleCounts.values.reduce((a, b) => a + b);
 
   @override
@@ -64,14 +74,12 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
             child: AppBar(
-              // 뒤로가기 버튼을 활성화하여 사용자가 TravelFormScreen을 닫고 이전 화면으로 돌아갈 수 있도록 합니다.
-              automaticallyImplyLeading: true, // 기본 뒤로가기 버튼 활성화
+              automaticallyImplyLeading: true,
               backgroundColor: Colors.white,
               foregroundColor: Colors.black,
               elevation: 1,
               title: const Text('여행 일정 생성', style: TextStyle(color: Colors.black)),
-              centerTitle: true, // 제목을 중앙에 정렬
-              // 기존의 Row 위젯 대신 자동으로 생성되는 뒤로가기 버튼을 사용합니다.
+              centerTitle: true,
             ),
           ),
         ),
@@ -106,6 +114,11 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
                           Expanded(child: _dateBox(endDate, () => pickDate(isStart: false))),
                         ],
                       ),
+                      const SizedBox(height: 8),
+                      _sectionTitle('출발 시간 *'),
+                      const SizedBox(height: 8),
+                      _timeBox(startTime, pickTime),
+                      const SizedBox(height: 20),
                       const SizedBox(height: 20),
                       _sectionTitle('여행 유형'),
                       const SizedBox(height: 8),
@@ -170,6 +183,7 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
                             final requestData = {
                               "startDate": startDate.toIso8601String(),
                               "endDate": endDate.toIso8601String(),
+                              "startTime": startTime.format(context),
                               "tags": selectedTags,
                               "peopleCount": totalPeople,
                               "ageGroups": peopleCounts,
@@ -213,6 +227,7 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
                                         relations: selectedRelations,
                                         request: requestController.text,
                                         scheduleData: itinerary,
+                                        userName: MainScreen.globalKey.currentState?.userName ?? 'guest',
                                       ),
                                     ),
                                   );
@@ -303,6 +318,20 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text('${date.year}/${date.month}/${date.day}', style: const TextStyle(fontSize: 14)),
+      ),
+    );
+  }
+
+  Widget _timeBox(TimeOfDay time, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade400),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text('${time.format(context)}', style: const TextStyle(fontSize: 14)),
       ),
     );
   }
