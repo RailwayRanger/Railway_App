@@ -14,8 +14,8 @@ class TravelFormScreen extends StatefulWidget {
 }
 
 class _TravelFormScreenState extends State<TravelFormScreen> {
-  DateTime startDate = DateTime(2025, 5, 23);
-  DateTime endDate = DateTime(2025, 5, 25);
+  DateTime startDate = DateTime.now();
+  DateTime endDate = DateTime.now().add(const Duration(days: 2));
   final List<String> allTags = ['힐링', '액티비티', '문화/역사', '자연', '맛집', '감성', '도시'];
   final List<String> selectedTags = [];
 
@@ -186,48 +186,62 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
 
                               print('응답 상태 코드: ${response.statusCode}');
                               print('응답 본문: ${response.body}');
-
-
+                              if(mounted) {
+                                Navigator.pop(context); // 로딩 다이얼로그 닫기
                               }
 
-                              if (response.statusCode == 200) {
+                              if (response.statusCode == 200 || response.statusCode == 201) {
                                 final result = jsonDecode(response.body);
                                 final itinerary = Map<int, List<Map<String, String>>>.from(
                                   (result['itinerary'] as Map).map((key, value) => MapEntry(
                                     int.parse(key),
-                                    List<Map<String, String>>.from(value.map((e) => Map<String, String>.from(e))),
+                                    List<Map<String, String>>.from(
+                                      value.map((e) => Map<String, String>.from(e)),
+                                    ),
                                   )),
                                 );
 
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => TravelScheduleScreen(
-                                      startDate: startDate,
-                                      endDate: endDate,
-                                      tags: selectedTags,
-                                      people: totalPeople,
-                                      relations: selectedRelations,
-                                      request: requestController.text,
-                                      scheduleData: itinerary,
+                                if (mounted) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => TravelScheduleScreen(
+                                        startDate: startDate,
+                                        endDate: endDate,
+                                        tags: selectedTags,
+                                        people: totalPeople,
+                                        relations: selectedRelations,
+                                        request: requestController.text,
+                                        scheduleData: itinerary,
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
+                                }
                               } else {
-                                if(mounted) {
+                                if (mounted) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => AlertDialog(
+                                      title: const Text('오류 발생'),
+                                      content: Text('서버 오류가 발생했습니다. (${response.statusCode})'),
+                                      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인'))],
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              print('요청 실패: $e');
+                              if (mounted) {
                                 Navigator.pop(context);
                                 showDialog(
                                   context: context,
                                   builder: (_) => AlertDialog(
-                                    title: const Text('오류 발생'),
-                                    content: Text('서버 오류가 발생했습니다. (${response.statusCode})'),
+                                    title: const Text('에러'),
+                                    content: const Text('요청 중 오류가 발생했습니다.'),
                                     actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인'))],
                                   ),
                                 );
                               }
-                            } catch (e) {
-                              Navigator.pop(context);
-                              print('요청 실패: $e');
                             }
                           },
                           style: ElevatedButton.styleFrom(
