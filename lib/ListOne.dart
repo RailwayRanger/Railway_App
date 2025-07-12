@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'two.dart'; // TravelScheduleScreen
 import 'main.dart'; // MainScreen의 GlobalKey에 접근하기 위해 import
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 // import 'search.dart'; // SearchScreen으로 직접 이동하는 것이 아니라 MainScreen을 통해 이동하므로 이 import는 필요 없습니다.
 
 class TravelFormScreen extends StatefulWidget {
@@ -29,6 +31,8 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
   final List<String> selectedRelations = [];
 
   final TextEditingController requestController = TextEditingController();
+
+
 
   Future<void> pickDate({required bool isStart}) async {
     final picked = await showDatePicker(
@@ -156,28 +160,66 @@ class _TravelFormScreenState extends State<TravelFormScreen> {
                         width: double.infinity,
                         height: 48,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             showDialog(
                               context: context,
                               barrierDismissible: false,
                               builder: (_) => const Center(child: CircularProgressIndicator()),
                             );
-                            Future.delayed(const Duration(seconds: 3), () {
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => TravelScheduleScreen(
-                                    startDate: startDate,
-                                    endDate: endDate,
-                                    tags: selectedTags,
-                                    people: totalPeople,
-                                    relations: selectedRelations,
-                                    request: requestController.text,
-                                  ),
-                                ),
+
+                            final requestData = {
+                              "startDate": startDate.toIso8601String(),
+                              "endDate": endDate.toIso8601String(),
+                              "tags": selectedTags,
+                              "peopleCount": totalPeople,
+                              "ageGroups": peopleCounts,
+                              "relations": selectedRelations,
+                              "request": requestController.text,
+                            };
+
+                            try {
+                              final response = await http.post(
+                                Uri.parse('https://port-0-railway-backend-mczsqk1b8f7c8972.sel5.cloudtype.app/api/itinerary/generate'),
+                                headers: {'Content-Type': 'application/json'},
+                                body: jsonEncode(requestData),
                               );
-                            });
+
+                              print('응답 상태 코드: ${response.statusCode}');
+                              print('응답 본문: ${response.body}');
+
+                              Navigator.pop(context); // 로딩 다이얼로그 닫기
+
+                              if (response.statusCode == 200) {
+                                final result = jsonDecode(response.body);
+                                final itinerary = Map<int, List<Map<String, String>>>.from(
+                                  (result['itinerary'] as Map).map((key, value) => MapEntry(
+                                    int.parse(key),
+                                    List<Map<String, String>>.from(value.map((e) => Map<String, String>.from(e))),
+                                  )),
+                                );
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => TravelScheduleScreen(
+                                      startDate: startDate,
+                                      endDate: endDate,
+                                      tags: selectedTags,
+                                      people: totalPeople,
+                                      relations: selectedRelations,
+                                      request: requestController.text,
+                                      scheduleData: itinerary,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                print('서버 오류: ${response.statusCode}');
+                                // 에러 처리 UI 추가 가능
+                              }
+                            } catch (e) {
+                              Navigator.pop(context);
+                              print('요청 실패: $e');
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.indigoAccent,
